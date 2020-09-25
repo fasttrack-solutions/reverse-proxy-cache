@@ -2,10 +2,11 @@ package reverseproxy
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -28,11 +29,26 @@ type ReverseProxyCache interface {
 	Get(key string) ([]byte, bool)
 }
 
+type DebugTransport struct{}
+
+func (DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	b, err := httputil.DumpRequestOut(r, false)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(string(b))
+	return http.DefaultTransport.RoundTrip(r)
+}
+
 //New instace of a ReverseProxy
 func New(target, bearerToken string, cache ReverseProxyCache) *ReverseProxy {
 	url, _ := url.Parse(target)
+
+	proxy := httputil.NewSingleHostReverseProxy(url)
+	proxy.Transport = DebugTransport{}
+
 	return &ReverseProxy{
-		proxy: httputil.NewSingleHostReverseProxy(url),
+		proxy: proxy,
 		cache: cache,
 		token: bearerToken,
 	}
@@ -46,8 +62,7 @@ func (rp *ReverseProxy) HandleRequest(res http.ResponseWriter, req *http.Request
 func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Request) {
 	req.URL.Path = strings.Replace(req.URL.Path, "/proxy", "", -1)
 	fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
-
-	log.Print(fullURL)
+	req.Host = req.URL.Host
 
 	data, exists := rp.cache.Get(fullURL)
 
@@ -72,19 +87,28 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 	}
 
 	// Update the headers to allow for SSL redirection
-	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+	//req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
 
 	// Note that ServeHttp is non blocking and uses a go routine under the hood
 	rp.proxy.ModifyResponse = func(h *http.Response) error {
 		buffer := &bytes.Buffer{}
+
 		_, err := io.Copy(buffer, h.Body)
 		if err != nil {
 			return err
 		}
 
+		encoding := h.Header.Get("Content-Encoding")
 		data := buffer.Bytes()
 
 		h.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+
+		if encoding == "gzip" {
+			data, err = gUnzipData(data)
+			if err != nil {
+				return err
+			}
+		}
 
 		cacheItem := ReverseProxyCacheItem{
 			ContentType: h.Header.Get("Content-Type"),
@@ -106,4 +130,24 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 
 	rp.proxy.ServeHTTP(res, req)
 
+}
+
+func gUnzipData(data []byte) (resData []byte, err error) {
+	b := bytes.NewBuffer(data)
+
+	var r io.Reader
+	r, err = gzip.NewReader(b)
+	if err != nil {
+		return
+	}
+
+	var resB bytes.Buffer
+	_, err = resB.ReadFrom(r)
+	if err != nil {
+		return
+	}
+
+	resData = resB.Bytes()
+
+	return
 }
