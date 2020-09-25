@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/GitbookIO/diskache"
@@ -10,8 +11,9 @@ import (
 )
 
 func main() {
+	apiKey := os.Getenv("API_KEY")
 	target := os.Getenv("TARGET")
-	bearerToken := os.Getenv("BEARER_TOKEN")
+	bearerToken := os.Getenv("TARGET_BEARER_TOKEN")
 	port := os.Getenv("PORT")
 
 	// Create an instance
@@ -27,6 +29,7 @@ func main() {
 	proxy := reverseproxy.New(target, bearerToken, dc)
 
 	router := gin.Default()
+	router.Use(Auth(apiKey))
 	router.POST("/cache/clear", func(c *gin.Context) {
 		err := dc.Clean()
 
@@ -36,7 +39,7 @@ func main() {
 
 		c.Status(200)
 	})
-	router.Any("proxy/*url", gin.WrapF(proxy.HandleRequest))
+	router.GET("proxy/*url", gin.WrapF(proxy.HandleRequest))
 	router.Run(":" + port)
 
 	// start server
@@ -46,4 +49,23 @@ func main() {
 	// }
 	log.Println("Started on " + port)
 
+}
+
+func Auth(secret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		apiKey := c.GetHeader("x-api-key")
+
+		if secret == "" {
+			log.Print("No api key set")
+			c.Next()
+			return
+		}
+
+		if secret != apiKey {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		c.Next()
+	}
 }
