@@ -16,7 +16,7 @@ func main() {
 
 	// Create an instance
 	opts := diskache.Opts{
-		Directory: "diskache_place",
+		Directory: "diskcache_place",
 	}
 	dc, err := diskache.New(&opts)
 
