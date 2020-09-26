@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -63,6 +64,8 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 	req.URL.Path = strings.Replace(req.URL.Path, "/proxy", "", -1)
 	fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
 	req.Host = req.URL.Host
+
+	log.Printf("getting FullURL: %s", fullURL)
 
 	data, exists := rp.cache.Get(fullURL)
 
@@ -121,6 +124,10 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 			return err
 		}
 
+		req := h.Request
+
+		fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
+		log.Printf("setting FullURL: %s", fullURL)
 		return rp.cache.Set(fullURL, bytes)
 	}
 
