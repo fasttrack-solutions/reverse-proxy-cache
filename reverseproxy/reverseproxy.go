@@ -60,6 +60,10 @@ func (rp *ReverseProxy) HandleRequest(res http.ResponseWriter, req *http.Request
 	rp.serveReverseProxy(res, req)
 }
 
+func IsSuccess(h *http.Response) bool {
+	return h.StatusCode > 199 && h.StatusCode < 300
+}
+
 func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Request) {
 	req.URL.Path = strings.Replace(req.URL.Path, "/proxy", "", -1)
 	fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
@@ -94,6 +98,11 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 
 	// Note that ServeHttp is non blocking and uses a go routine under the hood
 	rp.proxy.ModifyResponse = func(h *http.Response) error {
+
+		if !IsSuccess(h) {
+			return nil
+		}
+
 		buffer := &bytes.Buffer{}
 
 		_, err := io.Copy(buffer, h.Body)
@@ -128,6 +137,7 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 
 		fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
 		log.Printf("setting FullURL: %s", fullURL)
+
 		return rp.cache.Set(fullURL, bytes)
 	}
 
