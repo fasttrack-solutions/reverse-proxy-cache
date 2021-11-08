@@ -72,7 +72,7 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 	fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
 	req.Host = req.URL.Host
 
-	log.Printf("getting FullURL: %s", fullURL)
+	log.Printf("getting FullURL: %s replaced %s path is: %s", fullURL, rp.removeFromPath, req.URL.Path)
 
 	data, exists := rp.cache.Get(fullURL)
 
