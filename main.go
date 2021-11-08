@@ -15,6 +15,7 @@ func main() {
 	target := os.Getenv("TARGET")
 	bearerToken := os.Getenv("TARGET_BEARER_TOKEN")
 	port := os.Getenv("PORT")
+	removeFromPath := os.Getenv("REMOVE_FROM_PATH")
 
 	// Create an instance
 	opts := diskache.Opts{
@@ -26,7 +27,7 @@ func main() {
 		panic(err)
 	}
 
-	proxy := reverseproxy.New(target, bearerToken, dc)
+	proxy := reverseproxy.New(target, bearerToken, dc, removeFromPath)
 
 	router := gin.Default()
 	router.Use(Auth(apiKey))
