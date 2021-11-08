@@ -20,9 +20,10 @@ type ReverseProxyCacheItem struct {
 }
 
 type ReverseProxy struct {
-	proxy *httputil.ReverseProxy
-	cache ReverseProxyCache
-	token string
+	proxy          *httputil.ReverseProxy
+	cache          ReverseProxyCache
+	token          string
+	removeFromPath string
 }
 
 type ReverseProxyCache interface {
@@ -42,16 +43,17 @@ func (DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 //New instace of a ReverseProxy
-func New(target, bearerToken string, cache ReverseProxyCache) *ReverseProxy {
+func New(target, bearerToken string, cache ReverseProxyCache, removeFromPath string) *ReverseProxy {
 	url, _ := url.Parse(target)
 
 	proxy := httputil.NewSingleHostReverseProxy(url)
 	proxy.Transport = DebugTransport{}
 
 	return &ReverseProxy{
-		proxy: proxy,
-		cache: cache,
-		token: bearerToken,
+		proxy:          proxy,
+		cache:          cache,
+		token:          bearerToken,
+		removeFromPath: removeFromPath,
 	}
 }
 
@@ -66,6 +68,7 @@ func IsSuccess(h *http.Response) bool {
 
 func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Request) {
 	req.URL.Path = strings.Replace(req.URL.Path, "/proxy", "", -1)
+	req.URL.Path = strings.Replace(req.URL.Path, rp.removeFromPath, "", -1)
 	fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
 	req.Host = req.URL.Host
 
