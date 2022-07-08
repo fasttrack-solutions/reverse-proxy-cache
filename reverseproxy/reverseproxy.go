@@ -32,15 +32,38 @@ type ReverseProxyCache interface {
 	Get(key string) ([]byte, bool)
 }
 
-type DebugTransport struct{}
+type DebugTransport struct {
+	pathEncodeAfter string
+}
 
-func (DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+func (d DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	b, err := httputil.DumpRequestOut(r, false)
 	if err != nil {
 		return nil, err
 	}
 	fmt.Println(string(b))
+
+	r.URL.Path = d.pathEncode(r.URL.Path)
+
 	return http.DefaultTransport.RoundTrip(r)
+}
+
+func (d DebugTransport) pathEncode(path string) string {
+	if d.pathEncodeAfter == "" {
+		return path
+	}
+
+	i := strings.LastIndex(path, d.pathEncodeAfter)
+
+	if i == -1 {
+		return path
+	}
+
+	endingIndex := len(d.pathEncodeAfter) + i
+
+	res := path[:endingIndex] + url.QueryEscape(path[endingIndex:])
+
+	return res
 }
 
 //New instace of a ReverseProxy
@@ -48,7 +71,9 @@ func New(target, bearerToken string, cache ReverseProxyCache, removeFromPath, pa
 	url, _ := url.Parse(target)
 
 	proxy := httputil.NewSingleHostReverseProxy(url)
-	proxy.Transport = DebugTransport{}
+	proxy.Transport = DebugTransport{
+		pathEncodeAfter: pathEncodeAfter,
+	}
 
 	return &ReverseProxy{
 		proxy:           proxy,
@@ -68,28 +93,9 @@ func IsSuccess(h *http.Response) bool {
 	return h.StatusCode > 199 && h.StatusCode < 300
 }
 
-func (rp *ReverseProxy) pathEncode(path string) string {
-	if rp.pathEncodeAfter == "" {
-		return path
-	}
-
-	i := strings.LastIndex(path, rp.pathEncodeAfter)
-
-	if i == -1 {
-		return path
-	}
-
-	endingIndex := len(rp.pathEncodeAfter) + i
-
-	res := path[:endingIndex] + url.QueryEscape(path[endingIndex:])
-
-	return res
-}
-
 func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Request) {
 	req.URL.Path = strings.Replace(req.URL.Path, "/proxy", "", -1)
 	req.URL.Path = strings.Replace(req.URL.Path, rp.removeFromPath, "", -1)
-	req.URL.Path = rp.pathEncode(req.URL.Path)
 	fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
 	req.Host = req.URL.Host
 

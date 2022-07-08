@@ -7,31 +7,31 @@ import (
 )
 
 func TestPathEncodeAfterDisabled(t *testing.T) {
-	rp := ReverseProxy{
+	d := DebugTransport{
 		pathEncodeAfter: "",
 	}
 
-	res := rp.pathEncode("/content/path/")
+	res := d.pathEncode("/content/path/")
 
 	assert.Equal(t, res, "/content/path/")
 }
 
 func TestPathEncodeAfter(t *testing.T) {
-	rp := ReverseProxy{
+	d := DebugTransport{
 		pathEncodeAfter: "/content/path/",
 	}
 
-	res := rp.pathEncode("proxy/v1/spaces/-M6UYg3Uh0RcTd_2PSQ0/content/path/activities/setting-up-an-activity")
+	res := d.pathEncode("proxy/v1/spaces/-M6UYg3Uh0RcTd_2PSQ0/content/path/activities/setting-up-an-activity")
 
 	assert.Equal(t, res, "proxy/v1/spaces/-M6UYg3Uh0RcTd_2PSQ0/content/path/activities%2Fsetting-up-an-activity")
 }
 
 func TestPathEncodeAfterNotFound(t *testing.T) {
-	rp := ReverseProxy{
+	d := DebugTransport{
 		pathEncodeAfter: "/abc/",
 	}
 
-	res := rp.pathEncode("proxy/v1/spaces/-M6UYg3Uh0RcTd_2PSQ0/content/path/activities/setting-up-an-activity")
+	res := d.pathEncode("proxy/v1/spaces/-M6UYg3Uh0RcTd_2PSQ0/content/path/activities/setting-up-an-activity")
 
 	assert.Equal(t, res, "proxy/v1/spaces/-M6UYg3Uh0RcTd_2PSQ0/content/path/activities/setting-up-an-activity")
 }
