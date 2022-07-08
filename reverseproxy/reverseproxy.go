@@ -20,10 +20,11 @@ type ReverseProxyCacheItem struct {
 }
 
 type ReverseProxy struct {
-	proxy          *httputil.ReverseProxy
-	cache          ReverseProxyCache
-	token          string
-	removeFromPath string
+	proxy           *httputil.ReverseProxy
+	cache           ReverseProxyCache
+	token           string
+	removeFromPath  string
+	pathEncodeAfter string
 }
 
 type ReverseProxyCache interface {
@@ -43,17 +44,18 @@ func (DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 //New instace of a ReverseProxy
-func New(target, bearerToken string, cache ReverseProxyCache, removeFromPath string) *ReverseProxy {
+func New(target, bearerToken string, cache ReverseProxyCache, removeFromPath, pathEncodeAfter string) *ReverseProxy {
 	url, _ := url.Parse(target)
 
 	proxy := httputil.NewSingleHostReverseProxy(url)
 	proxy.Transport = DebugTransport{}
 
 	return &ReverseProxy{
-		proxy:          proxy,
-		cache:          cache,
-		token:          bearerToken,
-		removeFromPath: removeFromPath,
+		proxy:           proxy,
+		cache:           cache,
+		token:           bearerToken,
+		removeFromPath:  removeFromPath,
+		pathEncodeAfter: pathEncodeAfter,
 	}
 }
 
@@ -66,9 +68,28 @@ func IsSuccess(h *http.Response) bool {
 	return h.StatusCode > 199 && h.StatusCode < 300
 }
 
+func (rp *ReverseProxy) pathEncode(path string) string {
+	if rp.pathEncodeAfter == "" {
+		return path
+	}
+
+	i := strings.LastIndex(path, rp.pathEncodeAfter)
+
+	if i == -1 {
+		return path
+	}
+
+	endingIndex := len(rp.pathEncodeAfter) + i
+
+	res := path[:endingIndex] + url.QueryEscape(path[endingIndex:])
+
+	return res
+}
+
 func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Request) {
 	req.URL.Path = strings.Replace(req.URL.Path, "/proxy", "", -1)
 	req.URL.Path = strings.Replace(req.URL.Path, rp.removeFromPath, "", -1)
+	req.URL.Path = rp.pathEncode(req.URL.Path)
 	fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
 	req.Host = req.URL.Host
 

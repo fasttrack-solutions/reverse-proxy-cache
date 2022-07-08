@@ -16,7 +16,7 @@ func main() {
 	bearerToken := os.Getenv("TARGET_BEARER_TOKEN")
 	port := os.Getenv("PORT")
 	removeFromPath := os.Getenv("REMOVE_FROM_PATH")
-	useRawURLForGin := os.Getenv("USE_RAW_URL_FOR_GIN")
+	pathEncodeAfter := os.Getenv("PATH_ENCODE_AFTER")
 
 	// Create an instance
 	opts := diskache.Opts{
@@ -28,14 +28,9 @@ func main() {
 		panic(err)
 	}
 
-	proxy := reverseproxy.New(target, bearerToken, dc, removeFromPath)
+	proxy := reverseproxy.New(target, bearerToken, dc, removeFromPath, pathEncodeAfter)
 
 	router := gin.Default()
-
-	if useRawURLForGin == "true" {
-		router.UseRawPath = true
-		router.UnescapePathValues = false
-	}
 
 	router.Use(Auth(apiKey))
 	router.POST("/cache/clear", func(c *gin.Context) {
