@@ -43,7 +43,7 @@ func (d DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	fmt.Println(string(b))
 
-	r.URL.RawPath = d.pathEncode(r.URL.RawPath)
+	r.URL.RawPath = d.pathEncode(r.URL.Path)
 	fmt.Println("debugtransport path" + r.URL.Path)
 	fmt.Println("debugtransport raw path" + r.URL.RawPath)
 	fmt.Println("debugtransport full url:" + r.URL.String())
