@@ -1,6 +1,6 @@
 module github.com/fasttrack-solutions/reverse-proxy-cache
 
-go 1.15
+go 1.19
 
 require (
 	github.com/GitbookIO/diskache v0.0.0-20161028144708-bfb81bf58cb1
