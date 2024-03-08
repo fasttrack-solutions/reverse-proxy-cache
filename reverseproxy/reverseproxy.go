@@ -69,7 +69,7 @@ func (d DebugTransport) pathEncode(path string) string {
 	return res
 }
 
-//New instace of a ReverseProxy
+// New instace of a ReverseProxy
 func New(target, bearerToken string, cache ReverseProxyCache, removeFromPath, pathEncodeAfter string) *ReverseProxy {
 	url, _ := url.Parse(target)
 
@@ -170,6 +170,7 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 
 		fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
 		log.Printf("setting FullURL: %s", fullURL)
+		log.Printf("whats the encoding? %s", encoding)
 
 		return rp.cache.Set(fullURL, bytes)
 	}
