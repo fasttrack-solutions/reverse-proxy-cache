@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/google/brotli/go/cbrotli"
+	"github.com/andybalholm/brotli"
 )
 
 type ReverseProxyCacheItem struct {
@@ -216,7 +216,7 @@ func decodeBortil(data []byte) (resData []byte, err error) {
 	b := bytes.NewBuffer(data)
 
 	var r io.Reader
-	r = cbrotli.NewReader(b)
+	r = brotli.NewReader(b)
 
 	var resB bytes.Buffer
 	_, err = resB.ReadFrom(r)
