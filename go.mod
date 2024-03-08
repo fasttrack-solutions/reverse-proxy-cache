@@ -7,6 +7,7 @@ require (
 	github.com/GitbookIO/syncgroup v0.0.0-20200915204659-4f0b2961ab10 // indirect
 	github.com/gin-gonic/gin v1.7.4
 	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/google/brotli/go/cbrotli v0.0.0-20240221103305-ccec9628e492 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
