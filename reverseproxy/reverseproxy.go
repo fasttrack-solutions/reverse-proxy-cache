@@ -110,6 +110,7 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 
 	if v, exists := rp.rateLimit[req.URL.Host]; exists {
 		if time.Now().Before(v) {
+			log.Printf("Rate limit exceeded, resetting at %s", v)
 			http.Error(res, "Rate limit exceeded", 429)
 			return
 		}
@@ -154,6 +155,7 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 				}
 				tm := time.Unix(i, 0)
 				rp.rateLimit[req.URL.Host] = tm
+				log.Printf("Rate limit exceeded, resetting at %s", tm)
 			}
 			return nil
 		}
