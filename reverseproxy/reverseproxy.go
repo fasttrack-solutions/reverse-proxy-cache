@@ -11,7 +11,9 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/andybalholm/brotli"
 )
@@ -27,6 +29,7 @@ type ReverseProxy struct {
 	token           string
 	removeFromPath  string
 	pathEncodeAfter string
+	rateLimit       map[string]time.Time
 }
 
 type ReverseProxyCache interface {
@@ -86,6 +89,7 @@ func New(target, bearerToken string, cache ReverseProxyCache, removeFromPath, pa
 		token:           bearerToken,
 		removeFromPath:  removeFromPath,
 		pathEncodeAfter: pathEncodeAfter,
+		rateLimit:       make(map[string]time.Time),
 	}
 }
 
@@ -103,6 +107,13 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 	req.URL.Path = strings.Replace(req.URL.Path, rp.removeFromPath, "", -1)
 	fullURL := req.Method + req.URL.Path + "?" + req.URL.RawQuery
 	req.Host = req.URL.Host
+
+	if v, exists := rp.rateLimit[req.URL.Host]; exists {
+		if time.Now().Before(v) {
+			http.Error(res, "Rate limit exceeded", 429)
+			return
+		}
+	}
 
 	log.Printf("getting FullURL: %s replaced %s path is: %s", fullURL, rp.removeFromPath, req.URL.Path)
 
@@ -135,6 +146,15 @@ func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Req
 	rp.proxy.ModifyResponse = func(h *http.Response) error {
 
 		if !IsSuccess(h) {
+			if h.StatusCode == 429 {
+				resetAt := h.Header.Get("X-Ratelimit-Reset")
+				i, err := strconv.ParseInt(resetAt, 10, 64)
+				if err != nil {
+					panic(err)
+				}
+				tm := time.Unix(i, 0)
+				rp.rateLimit[req.URL.Host] = tm
+			}
 			return nil
 		}
 
