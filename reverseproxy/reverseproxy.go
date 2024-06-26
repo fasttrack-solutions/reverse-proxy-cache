@@ -99,7 +99,7 @@ func (rp *ReverseProxy) HandleRequest(res http.ResponseWriter, req *http.Request
 }
 
 func IsSuccess(h *http.Response) bool {
-	return h.StatusCode > 199 && h.StatusCode < 300
+	return (h.StatusCode > 199 && h.StatusCode < 300) || h.StatusCode == 404
 }
 
 func (rp *ReverseProxy) serveReverseProxy(res http.ResponseWriter, req *http.Request) {
